@@ -36,6 +36,7 @@ import (
 
 	"sigs.k8s.io/scheduler-plugins/pkg/capacityscheduling"
 	"sigs.k8s.io/scheduler-plugins/pkg/coscheduling"
+	"sigs.k8s.io/scheduler-plugins/pkg/deadline"
 	"sigs.k8s.io/scheduler-plugins/pkg/networkaware/networkoverhead"
 	"sigs.k8s.io/scheduler-plugins/pkg/networkaware/topologicalsort"
 	"sigs.k8s.io/scheduler-plugins/pkg/noderesources"
@@ -476,6 +477,25 @@ profiles:
 		t.Fatal(err)
 	}
 
+	// SimpleDDL plugin config
+	simpleDDLConfigFile := filepath.Join(tmpDir, "simpleDDL.yaml")
+	if err := os.WriteFile(simpleDDLConfigFile, []byte(fmt.Sprintf(`
+apiVersion: kubescheduler.config.k8s.io/v1beta3
+kind: KubeSchedulerConfiguration
+clientConnection:
+  kubeconfig: "%s"
+profiles:
+- schedulerName: "simple-ddl-scheduler"
+  plugins:
+    queueSort:
+      enabled:
+      - name: SimpleDDL
+      disabled:
+      - name: "*"
+`, configKubeconfig)), os.FileMode(0600)); err != nil {
+		t.Fatal(err)
+	}
+
 	testcases := []struct {
 		name            string
 		flags           []string
@@ -542,6 +562,24 @@ profiles:
 						Enabled: append(defaults.ExpandedPluginsV1.Reserve.Enabled, config.Plugin{Name: coscheduling.Name}),
 					},
 					PreBind: defaults.ExpandedPluginsV1.PreBind,
+				},
+			},
+		},
+		{
+			name:            "single profile config - SimpleDDL",
+			flags:           []string{"--config", simpleDDLConfigFile},
+			registryOptions: []app.Option{app.WithPlugin(deadline.Name, deadline.New)},
+			wantPlugins: map[string]*config.Plugins{
+				"simple-ddl-scheduler": {
+					QueueSort:  config.PluginSet{Enabled: []config.Plugin{{Name: deadline.Name}}},
+					Bind:       defaults.ExpandedPluginsV1beta3.Bind,
+					PreFilter:  defaults.ExpandedPluginsV1beta3.PreFilter,
+					Filter:     defaults.ExpandedPluginsV1beta3.Filter,
+					PostFilter: defaults.ExpandedPluginsV1beta3.PostFilter,
+					PreScore:   defaults.ExpandedPluginsV1beta3.PreScore,
+					Score:      defaults.ExpandedPluginsV1beta3.Score,
+					Reserve:    defaults.ExpandedPluginsV1beta3.Reserve,
+					PreBind:    defaults.ExpandedPluginsV1beta3.PreBind,
 				},
 			},
 		},

@@ -29,10 +29,11 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/apis/config/testing/defaults"
 
 	"sigs.k8s.io/scheduler-plugins/apis/config"
-	"sigs.k8s.io/scheduler-plugins/apis/config/v1"
+	v1 "sigs.k8s.io/scheduler-plugins/apis/config/v1"
 	"sigs.k8s.io/scheduler-plugins/apis/config/v1beta2"
 	"sigs.k8s.io/scheduler-plugins/apis/config/v1beta3"
 	"sigs.k8s.io/scheduler-plugins/pkg/coscheduling"
+	"sigs.k8s.io/scheduler-plugins/pkg/deadline"
 	"sigs.k8s.io/scheduler-plugins/pkg/networkaware/networkoverhead"
 	"sigs.k8s.io/scheduler-plugins/pkg/networkaware/topologicalsort"
 	"sigs.k8s.io/scheduler-plugins/pkg/noderesources"
@@ -68,6 +69,8 @@ profiles:
     args:
       permitWaitingTimeSeconds: 10
       deniedPGExpirationTimeSeconds: 3
+  - name: SimpleDDL
+    args:
   - name: NodeResourcesAllocatable
     args:
       mode: Least
@@ -110,6 +113,10 @@ profiles:
 							Args: &config.CoschedulingArgs{
 								PermitWaitingTimeSeconds: 10,
 							},
+						},
+						{
+							Name: deadline.Name,
+							Args: &config.SimpleDDLArgs{},
 						},
 						{
 							Name: noderesources.AllocatableName,
@@ -203,6 +210,8 @@ profiles:
   pluginConfig:
   - name: Coscheduling
     args:
+  - name: SimpleDDL
+    args:
   - name: NodeResourcesAllocatable
     args:
   - name: TargetLoadPacking
@@ -222,6 +231,10 @@ profiles:
 							Args: &config.CoschedulingArgs{
 								PermitWaitingTimeSeconds: 60,
 							},
+						},
+						{
+							Name: deadline.Name,
+							Args: &config.SimpleDDLArgs{},
 						},
 						{
 							Name: noderesources.AllocatableName,
@@ -328,6 +341,8 @@ kind: KubeSchedulerConfiguration
 profiles:
 - schedulerName: scheduler-plugins
   pluginConfig:
+  - name: SimpleDDL
+    args:
   - name: TopologicalSort
     args:
       namespaces:
@@ -344,6 +359,10 @@ profiles:
 					SchedulerName: "scheduler-plugins",
 					Plugins:       defaults.PluginsV1beta3,
 					PluginConfig: []schedconfig.PluginConfig{
+						{
+							Name: deadline.Name,
+							Args: &config.SimpleDDLArgs{},
+						},
 						{
 							Name: topologicalsort.Name,
 							Args: &config.TopologicalSortArgs{
@@ -403,6 +422,8 @@ kind: KubeSchedulerConfiguration
 profiles:
 - schedulerName: scheduler-plugins
   pluginConfig:
+  - name: SimpleDDL
+    args:
   - name: TopologicalSort
     args:
   - name: NetworkOverhead
@@ -413,6 +434,10 @@ profiles:
 					SchedulerName: "scheduler-plugins",
 					Plugins:       defaults.PluginsV1beta3,
 					PluginConfig: []schedconfig.PluginConfig{
+						{
+							Name: deadline.Name,
+							Args: &config.SimpleDDLArgs{},
+						},
 						{
 							Name: topologicalsort.Name,
 							Args: &config.TopologicalSortArgs{
@@ -473,6 +498,8 @@ kind: KubeSchedulerConfiguration
 profiles:
 - schedulerName: scheduler-plugins
   pluginConfig:
+  - name: SimpleDDL
+    args:
   - name: TopologicalSort
     args:
       namespaces:
@@ -489,6 +516,10 @@ profiles:
 					SchedulerName: "scheduler-plugins",
 					Plugins:       defaults.PluginsV1,
 					PluginConfig: []schedconfig.PluginConfig{
+						{
+							Name: deadline.Name,
+							Args: &config.SimpleDDLArgs{},
+						},
 						{
 							Name: topologicalsort.Name,
 							Args: &config.TopologicalSortArgs{
@@ -548,6 +579,8 @@ kind: KubeSchedulerConfiguration
 profiles:
 - schedulerName: scheduler-plugins
   pluginConfig:
+  - name: SimpleDDL
+    args:
   - name: TopologicalSort
     args:
   - name: NetworkOverhead
@@ -558,6 +591,10 @@ profiles:
 					SchedulerName: "scheduler-plugins",
 					Plugins:       defaults.PluginsV1beta3,
 					PluginConfig: []schedconfig.PluginConfig{
+						{
+							Name: deadline.Name,
+							Args: &config.SimpleDDLArgs{},
+						},
 						{
 							Name: topologicalsort.Name,
 							Args: &config.TopologicalSortArgs{
@@ -657,6 +694,10 @@ func TestCodecsEncodePluginConfig(t *testing.T) {
 								},
 							},
 							{
+								Name: deadline.Name,
+								Args: &config.SimpleDDLArgs{},
+							},
+							{
 								Name: noderesources.AllocatableName,
 								Args: &config.NodeResourcesAllocatableArgs{
 									Mode: config.Least,
@@ -732,6 +773,10 @@ profiles:
     name: Coscheduling
   - args:
       apiVersion: kubescheduler.config.k8s.io/v1beta2
+      kind: SimpleDDLArgs
+    name: SimpleDDL
+  - args:
+      apiVersion: kubescheduler.config.k8s.io/v1beta2
       kind: NodeResourcesAllocatableArgs
       mode: Least
       resources:
@@ -783,6 +828,10 @@ profiles:
 								Args: &config.CoschedulingArgs{
 									PermitWaitingTimeSeconds: 10,
 								},
+							},
+							{
+								Name: deadline.Name,
+								Args: &config.SimpleDDLArgs{},
 							},
 							{
 								Name: noderesources.AllocatableName,
@@ -889,6 +938,10 @@ profiles:
     name: Coscheduling
   - args:
       apiVersion: kubescheduler.config.k8s.io/v1beta3
+      kind: SimpleDDLArgs
+    name: SimpleDDL
+  - args:
+      apiVersion: kubescheduler.config.k8s.io/v1beta3
       kind: NodeResourcesAllocatableArgs
       mode: Least
       resources:
@@ -968,6 +1021,10 @@ profiles:
 								Args: &config.CoschedulingArgs{
 									PermitWaitingTimeSeconds: 10,
 								},
+							},
+							{
+								Name: deadline.Name,
+								Args: &config.SimpleDDLArgs{},
 							},
 							{
 								Name: noderesources.AllocatableName,
@@ -1072,6 +1129,10 @@ profiles:
       kind: CoschedulingArgs
       permitWaitingTimeSeconds: 10
     name: Coscheduling
+  - args:
+      apiVersion: kubescheduler.config.k8s.io/v1
+      kind: SimpleDDLArgs
+    name: SimpleDDL
   - args:
       apiVersion: kubescheduler.config.k8s.io/v1
       kind: NodeResourcesAllocatableArgs

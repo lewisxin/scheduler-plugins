@@ -196,3 +196,8 @@ type NodeResourceTopologyMatchArgs struct {
 
 // PreemptionTolerationArgs reuses DefaultPluginArgs.
 type PreemptionTolerationArgs schedulerconfigv1beta2.DefaultPreemptionArgs
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type SimpleDDLArgs struct {
+	metav1.TypeMeta `json:",inline"`
+}

@@ -251,6 +251,11 @@ func TestSchedulingDefaults(t *testing.T) {
 				NetworkTopologyName: pointer.StringPtr("nt-latency-costs"),
 			},
 		},
+		{
+			name:   "empty config SimpleDDLArgs",
+			config: &SimpleDDLArgs{},
+			expect: &SimpleDDLArgs{},
+		},
 	}
 
 	for _, tc := range tests {

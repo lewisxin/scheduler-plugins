@@ -239,3 +239,8 @@ type NetworkOverheadArgs struct {
 	// The NetworkTopology CRD name
 	NetworkTopologyName *string `json:"networkTopologyName,omitempty"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type SimpleDDLArgs struct {
+	metav1.TypeMeta `json:",inline"`
+}
