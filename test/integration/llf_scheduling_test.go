@@ -122,7 +122,8 @@ func (s *LLFSchedulingSuite) TestLLFSchedulingQueueSort() {
 			}
 
 			for _, expected := range tt.expectedPods {
-				actual := s.testCtx.Scheduler.NextPod().Pod.Name
+				p, _ := s.testCtx.Scheduler.NextPod()
+				actual := p.Pod.Name
 				if actual != expected {
 					t.Errorf("Expect Pod %q, but got %q", expected, actual)
 				} else {
