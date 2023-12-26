@@ -56,6 +56,11 @@ func getPodExecutionTime(pod *v1.Pod) time.Duration {
 	return 0
 }
 
+func getATLASEnabled(pod *v1.Pod) bool {
+	enabled, ok := pod.Annotations[annotations.AnnotationKeyATLASEnabled]
+	return !ok || enabled == "true"
+}
+
 func getPodMetrics(pod *v1.Pod) estimator.Metrics {
 	var metrics estimator.Metrics
 	if ddlRel, err := time.ParseDuration(pod.Annotations[annotations.AnnotationKeyDDL]); err == nil {
@@ -71,13 +76,16 @@ func (l *laxityManager) createPodExecutionIfNotExist(pod *v1.Pod) *podExecution 
 	if !ok || podExec == nil {
 		ddl := l.deadlineManager.GetPodDeadline(pod)
 		execTime := getPodExecutionTime(pod)
-		metrics := getPodMetrics(pod)
-		estExecTime := l.atlas.EstimateExecTime(metrics)
-		if estExecTime == 0 {
-			l.atlas.Add(metrics, execTime)
+		estExecTime := execTime
+		if getATLASEnabled(pod) {
+			metrics := getPodMetrics(pod)
 			estExecTime = l.atlas.EstimateExecTime(metrics)
+			if estExecTime == 0 {
+				l.atlas.Add(metrics, execTime)
+				estExecTime = l.atlas.EstimateExecTime(metrics)
+			}
+			klog.InfoS("laxityManager: EstimateExecTime", "estExecTime", estExecTime, "execTime", execTime, "metrics", metrics, "pod", klog.KObj(pod))
 		}
-		klog.V(5).InfoS("laxityManager: EstimateExecTime", "estExecTime", estExecTime, "execTime", execTime, "metrics", metrics, "pod", klog.KObj(pod))
 		podExec = &podExecution{
 			deadline:    ddl,
 			estExecTime: estExecTime,

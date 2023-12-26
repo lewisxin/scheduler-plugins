@@ -11,4 +11,6 @@ const (
 	AnnotationKeyPausePod = AnnotationKeyPrefix + "pause-pod"
 	// AnnotationKeyPreemptible indicates a pod cannot be paused
 	AnnotationKeyPreemptible = AnnotationKeyPrefix + "preemptible"
+	// AnnotationKeyATLASEnabled indicates if execution time should be estimated using ATLAS predictor
+	AnnotationKeyATLASEnabled = AnnotationKeyPrefix + "atlas-enabled"
 )
