@@ -8,6 +8,7 @@ import (
 	gocache "github.com/patrickmn/go-cache"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/api/v1/resource"
 	"sigs.k8s.io/scheduler-plugins/pkg/rtpreemptive/annotations"
 	"sigs.k8s.io/scheduler-plugins/pkg/rtpreemptive/deadline"
 	"sigs.k8s.io/scheduler-plugins/pkg/rtpreemptive/estimator"
@@ -49,6 +50,12 @@ func NewLaxityManager() Manager {
 	}
 }
 
+func getPodResources(pod *v1.Pod) (req, limit v1.ResourceList) {
+	requests := resource.PodRequests(pod, resource.PodResourcesOptions{})
+	limits := resource.PodLimits(pod, resource.PodResourcesOptions{})
+	return requests, limits
+}
+
 func getPodExecutionTime(pod *v1.Pod) time.Duration {
 	if execTime, err := time.ParseDuration(pod.Annotations[annotations.AnnotationKeyExecTime]); err == nil {
 		return execTime
@@ -67,6 +74,9 @@ func getPodMetrics(pod *v1.Pod) estimator.Metrics {
 		metrics = append(metrics, float64(ddlRel))
 	}
 	metrics = append(metrics, float64(getPodExecutionTime(pod)))
+	req, limit := getPodResources(pod)
+	metrics = append(metrics, req.Cpu().AsApproximateFloat64(), req.Memory().AsApproximateFloat64(), req.Pods().AsApproximateFloat64())
+	metrics = append(metrics, limit.Cpu().AsApproximateFloat64(), limit.Memory().AsApproximateFloat64(), limit.Pods().AsApproximateFloat64())
 	return metrics
 }
 
