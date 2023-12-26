@@ -65,7 +65,7 @@ func getPodExecutionTime(pod *v1.Pod) time.Duration {
 
 func getATLASEnabled(pod *v1.Pod) bool {
 	enabled, ok := pod.Annotations[annotations.AnnotationKeyATLASEnabled]
-	return !ok || enabled == "true"
+	return ok && enabled == "true"
 }
 
 func getPodMetrics(pod *v1.Pod) estimator.Metrics {
