@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"time"
 
 	gocache "github.com/patrickmn/go-cache"
@@ -19,7 +21,7 @@ const (
 	// EstimatorMetricSize describes the size of the metrics expected to be passed to ATLAS LLSP solver.
 	// When a metrics passed has more items, it will be truncated.
 	// If there are less items, 0 will be added for padding
-	EstimatorMetricSize = 5
+	EstimatorMetricSize = 10
 )
 
 var (
@@ -57,6 +59,20 @@ func getPodResources(pod *v1.Pod) (req, limit v1.ResourceList) {
 	return requests, limits
 }
 
+func getPodAdditionalMetrics(pod *v1.Pod) []float64 {
+	var metrics []float64
+	metricsStr, ok := pod.Annotations[annotations.AnnotationKeyATLASMetrics]
+	if !ok {
+		return metrics
+	}
+	metricsTokens := strings.Split(metricsStr, ",")
+	for _, token := range metricsTokens {
+		num, _ := strconv.ParseFloat(token, 64)
+		metrics = append(metrics, num)
+	}
+	return metrics
+}
+
 func getPodExecutionTime(pod *v1.Pod) time.Duration {
 	if execTime, err := time.ParseDuration(pod.Annotations[annotations.AnnotationKeyExecTime]); err == nil {
 		return execTime
@@ -71,13 +87,13 @@ func getATLASEnabled(pod *v1.Pod) bool {
 
 func getPodMetrics(pod *v1.Pod) estimator.Metrics {
 	var metrics estimator.Metrics
+	req, limit := getPodResources(pod)
+	metrics = append(metrics, req.Cpu().AsApproximateFloat64(), req.Memory().AsApproximateFloat64())
+	metrics = append(metrics, limit.Cpu().AsApproximateFloat64(), limit.Memory().AsApproximateFloat64())
 	if ddlRel, err := time.ParseDuration(pod.Annotations[annotations.AnnotationKeyDDL]); err == nil {
 		metrics = append(metrics, float64(ddlRel))
 	}
-	metrics = append(metrics, float64(getPodExecutionTime(pod)))
-	req, limit := getPodResources(pod)
-	metrics = append(metrics, req.Cpu().AsApproximateFloat64(), req.Memory().AsApproximateFloat64(), req.Pods().AsApproximateFloat64())
-	metrics = append(metrics, limit.Cpu().AsApproximateFloat64(), limit.Memory().AsApproximateFloat64(), limit.Pods().AsApproximateFloat64())
+	metrics = append(metrics, getPodAdditionalMetrics(pod)...)
 	return metrics
 }
 
