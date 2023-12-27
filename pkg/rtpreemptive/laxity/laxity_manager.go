@@ -3,6 +3,7 @@ package laxity
 import (
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	gocache "github.com/patrickmn/go-cache"
@@ -90,7 +91,9 @@ func (l *laxityManager) createPodExecutionIfNotExist(pod *v1.Pod) *podExecution 
 		if getATLASEnabled(pod) {
 			metrics := getPodMetrics(pod)
 			estExecTime = l.atlas.EstimateExecTime(metrics)
-			if estExecTime == 0 {
+			if execTime != 0 && math.Abs(float64(execTime-estExecTime))/float64(execTime) > 0.6 {
+				// if estimated execution time deviate from the execution time for more than 60%
+				// update the model
 				l.atlas.Add(metrics, execTime)
 				estExecTime = l.atlas.EstimateExecTime(metrics)
 			}
