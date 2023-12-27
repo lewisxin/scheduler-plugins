@@ -73,6 +73,12 @@ func getPodAdditionalMetrics(pod *v1.Pod) []float64 {
 	return metrics
 }
 
+func getJobIndex(pod *v1.Pod) int {
+	token := pod.Annotations["batch.kubernetes.io/job-completion-index"]
+	idx, _ := strconv.Atoi(token)
+	return idx
+}
+
 func getPodExecutionTime(pod *v1.Pod) time.Duration {
 	if execTime, err := time.ParseDuration(pod.Annotations[annotations.AnnotationKeyExecTime]); err == nil {
 		return execTime
@@ -93,6 +99,7 @@ func getPodMetrics(pod *v1.Pod) estimator.Metrics {
 	if ddlRel, err := time.ParseDuration(pod.Annotations[annotations.AnnotationKeyDDL]); err == nil {
 		metrics = append(metrics, float64(ddlRel))
 	}
+	metrics = append(metrics, float64(getJobIndex(pod)))
 	metrics = append(metrics, getPodAdditionalMetrics(pod)...)
 	return metrics
 }
