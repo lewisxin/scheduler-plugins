@@ -1,4 +1,4 @@
-package estimator
+package predictor
 
 import (
 	"time"
@@ -12,25 +12,24 @@ import "C"
 
 type Metrics []float64
 
-type Estimator interface {
+type Predictor interface {
 	Add(metrics Metrics, actualExecTime time.Duration)
 	EstimateExecTime(metrics Metrics) time.Duration
 }
 
-// TODO: integrate with ATLAS C lib
-type atlasEstimator struct {
+type atlasPredictor struct {
 	msize  int
 	solver *C.llsp_t
 }
 
-func NewATLASEstimator(metricSize int) Estimator {
-	return &atlasEstimator{
+func NewATLASPredictor(metricSize int) Predictor {
+	return &atlasPredictor{
 		msize:  metricSize,
 		solver: C.llsp_new(C.size_t(metricSize)),
 	}
 }
 
-func (a *atlasEstimator) padMetrics(metrics Metrics) Metrics {
+func (a *atlasPredictor) padMetrics(metrics Metrics) Metrics {
 	maxSize := 4
 	if size := len(metrics); size < maxSize {
 		maxSize = size
@@ -44,13 +43,13 @@ func (a *atlasEstimator) padMetrics(metrics Metrics) Metrics {
 	return m
 }
 
-func (a *atlasEstimator) Add(metrics Metrics, actualExecTime time.Duration) {
+func (a *atlasPredictor) Add(metrics Metrics, actualExecTime time.Duration) {
 	C.llsp_add(a.solver, (*C.double)(&a.padMetrics(metrics)[0]), C.double(actualExecTime))
 	C.llsp_solve(a.solver)
 }
 
 // EstimateExecTime returns the estimated execution time based on a set of metrics
-func (a *atlasEstimator) EstimateExecTime(metrics Metrics) time.Duration {
+func (a *atlasPredictor) EstimateExecTime(metrics Metrics) time.Duration {
 	prediction := C.llsp_predict(a.solver, (*C.double)(&a.padMetrics(metrics)[0]))
 	return time.Duration(prediction)
 }
