@@ -21,7 +21,8 @@ const (
 	// PredictorMetricSize describes the size of the metrics expected to be passed to ATLAS LLSP solver.
 	// When a metrics passed has more items, it will be truncated.
 	// If there are less items, 0 will be added for padding
-	PredictorMetricSize = 10
+	// PredictorMetricSize = 10
+	PredictorMetricSize = 3
 )
 
 var (
@@ -93,12 +94,12 @@ func getATLASEnabled(pod *v1.Pod) bool {
 
 func getPodMetrics(pod *v1.Pod) predictor.Metrics {
 	var metrics predictor.Metrics
-	req, limit := getPodResources(pod)
-	metrics = append(metrics, req.Cpu().AsApproximateFloat64(), req.Memory().AsApproximateFloat64())
-	metrics = append(metrics, limit.Cpu().AsApproximateFloat64(), limit.Memory().AsApproximateFloat64())
-	if ddlRel, err := time.ParseDuration(pod.Annotations[annotations.AnnotationKeyDDL]); err == nil {
-		metrics = append(metrics, float64(ddlRel))
-	}
+	// req, limit := getPodResources(pod)
+	// metrics = append(metrics, req.Cpu().AsApproximateFloat64(), req.Memory().AsApproximateFloat64())
+	// metrics = append(metrics, limit.Cpu().AsApproximateFloat64(), limit.Memory().AsApproximateFloat64())
+	// if ddlRel, err := time.ParseDuration(pod.Annotations[annotations.AnnotationKeyDDL]); err == nil {
+	// 	metrics = append(metrics, float64(ddlRel))
+	// }
 	metrics = append(metrics, float64(getJobIndex(pod)))
 	metrics = append(metrics, getPodAdditionalMetrics(pod)...)
 	return metrics
