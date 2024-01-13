@@ -20,8 +20,7 @@ const (
 	// PredictorMetricSize describes the size of the metrics expected to be passed to ATLAS LLSP solver.
 	// When a metrics passed has more items, it will be truncated.
 	// If there are less items, 0 will be added for padding
-	// PredictorMetricSize = 10
-	PredictorMetricSize = 3
+	PredictorMetricSize = 5
 )
 
 var (
@@ -39,16 +38,20 @@ type Manager interface {
 	RemovePodExecution(pod *v1.Pod)
 }
 
+const defaultPredictor = "default-predictor"
+
 type laxityManager struct {
 	deadlineManager deadline.Manager
-	atlas           predictor.Predictor
+	predictors      map[string]predictor.Predictor
 	podExecutions   *gocache.Cache
 }
 
 func NewLaxityManager() Manager {
+	predictors := make(map[string]predictor.Predictor)
+	predictors[defaultPredictor] = predictor.NewATLASPredictor(PredictorMetricSize)
 	return &laxityManager{
 		deadlineManager: deadline.NewDeadlineManager(),
-		atlas:           predictor.NewATLASPredictor(PredictorMetricSize),
+		predictors:      predictors,
 		podExecutions:   gocache.New(time.Second, time.Second),
 	}
 }
@@ -61,7 +64,7 @@ func getPodResources(pod *v1.Pod) (req, limit v1.ResourceList) {
 
 func getPodAdditionalMetrics(pod *v1.Pod) []float64 {
 	var metrics []float64
-	metricsStr, ok := pod.Annotations[annotations.AnnotationKeyATLASMetrics]
+	metricsStr, ok := pod.Annotations[annotations.AnnotationKeyPredictorMetrics]
 	if !ok {
 		return metrics
 	}
@@ -74,6 +77,9 @@ func getPodAdditionalMetrics(pod *v1.Pod) []float64 {
 }
 
 func getJobIndex(pod *v1.Pod) int {
+	if useIndex, ok := pod.Annotations[annotations.AnnotationKeyPredictorUseJobIndex]; !ok || useIndex == "false" {
+		return 0
+	}
 	token := pod.Annotations["batch.kubernetes.io/job-completion-index"]
 	idx, _ := strconv.Atoi(token)
 	return idx
@@ -104,6 +110,22 @@ func getPodMetrics(pod *v1.Pod) predictor.Metrics {
 	return metrics
 }
 
+func getPredictorName(pod *v1.Pod) string {
+	predictorName, ok := pod.Annotations[annotations.AnnotationKeyPredictor]
+	if !ok || len(predictorName) == 0 {
+		predictorName = defaultPredictor
+	}
+	return predictorName
+}
+
+func (l *laxityManager) getPredictor(name string) predictor.Predictor {
+	pred, ok := l.predictors[name]
+	if !ok {
+		pred = predictor.NewATLASPredictor(PredictorMetricSize)
+	}
+	return pred
+}
+
 func (l *laxityManager) createPodExecutionIfNotExist(pod *v1.Pod) *podExecution {
 	key := toCacheKey(pod)
 	podExec, ok := l.podExecutions.Get(key)
@@ -113,7 +135,8 @@ func (l *laxityManager) createPodExecutionIfNotExist(pod *v1.Pod) *podExecution 
 		estExecTime := execTime
 		if getATLASEnabled(pod) {
 			metrics := getPodMetrics(pod)
-			estExecTime = l.atlas.EstimateExecTime(metrics)
+			pred := l.getPredictor(getPredictorName(pod))
+			estExecTime = pred.EstimateExecTime(metrics)
 			// if execTime != 0 && math.Abs(float64(execTime-estExecTime))/float64(execTime) > 0.6 {
 			// 	// if estimated execution time deviate from the execution time for more than 60%
 			// 	// update the model
@@ -147,7 +170,8 @@ func (l *laxityManager) GetPodLaxity(pod *v1.Pod) (time.Duration, error) {
 	if err == ErrBeyondEstimation {
 		metrics := getPodMetrics(pod)
 		klog.V(5).ErrorS(ErrBeyondEstimation, "wrongly estimated execution time, updating predictor...", "metrics", metrics, "actualExecTime", podExec.actualExecTime, "pod", klog.KObj(pod))
-		l.atlas.Add(metrics, podExec.actualExecTime)
+		pred := l.getPredictor(getPredictorName(pod))
+		pred.Add(metrics, podExec.actualExecTime)
 	}
 	return laxity, err
 }
@@ -157,7 +181,8 @@ func (l *laxityManager) RemovePodExecution(pod *v1.Pod) {
 	podExec.pause()
 	metrics := getPodMetrics(pod)
 	klog.V(5).InfoS("pod execution finished, updating predictor...", "metrics", metrics, "actualExecTime", podExec.actualExecTime, "pod", klog.KObj(pod))
-	l.atlas.Add(metrics, podExec.actualExecTime)
+	pred := l.getPredictor(getPredictorName(pod))
+	pred.Add(metrics, podExec.actualExecTime)
 	l.podExecutions.Delete(toCacheKey(pod))
 }
 
