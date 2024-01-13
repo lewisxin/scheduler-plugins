@@ -122,6 +122,7 @@ func (l *laxityManager) getPredictor(name string) predictor.Predictor {
 	pred, ok := l.predictors[name]
 	if !ok {
 		pred = predictor.NewATLASPredictor(PredictorMetricSize)
+		l.predictors[name] = pred
 	}
 	return pred
 }
