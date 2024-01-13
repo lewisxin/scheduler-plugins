@@ -144,7 +144,7 @@ func (l *laxityManager) createPodExecutionIfNotExist(pod *v1.Pod) *podExecution 
 			// 	l.atlas.Add(metrics, execTime)
 			// 	estExecTime = l.atlas.EstimateExecTime(metrics)
 			// }
-			klog.InfoS("laxityManager: EstimateExecTime", "predictor", getPredictorName(pod), "estExecTime", estExecTime, "execTime", execTime, "metrics", metrics, "pod", klog.KObj(pod))
+			klog.InfoS("[ATLAS-Predictor] laxityManager: EstimateExecTime", "predictor", getPredictorName(pod), "estExecTime", estExecTime, "execTime", execTime, "metrics", metrics, "pod", klog.KObj(pod))
 		}
 		podExec = &podExecution{
 			deadline:    ddl,
@@ -170,7 +170,7 @@ func (l *laxityManager) GetPodLaxity(pod *v1.Pod) (time.Duration, error) {
 	laxity, err := podExec.laxity()
 	if err == ErrBeyondEstimation {
 		metrics := getPodMetrics(pod)
-		klog.V(5).ErrorS(ErrBeyondEstimation, "wrongly estimated execution time, updating predictor...", "metrics", metrics, "actualExecTime", podExec.actualExecTime, "pod", klog.KObj(pod))
+		klog.ErrorS(ErrBeyondEstimation, "[ATLAS-Predictor] wrongly estimated execution time, updating predictor...", "metrics", metrics, "actualExecTime", podExec.actualExecTime, "pod", klog.KObj(pod))
 		pred := l.getPredictor(getPredictorName(pod))
 		pred.Add(metrics, podExec.actualExecTime)
 	}
@@ -181,7 +181,7 @@ func (l *laxityManager) RemovePodExecution(pod *v1.Pod) {
 	podExec := l.createPodExecutionIfNotExist(pod)
 	podExec.pause()
 	metrics := getPodMetrics(pod)
-	klog.V(5).InfoS("pod execution finished, updating predictor...", "metrics", metrics, "actualExecTime", podExec.actualExecTime, "pod", klog.KObj(pod))
+	klog.InfoS("[ATLAS-Predictor] pod execution finished, updating predictor...", "metrics", metrics, "actualExecTime", podExec.actualExecTime, "pod", klog.KObj(pod))
 	pred := l.getPredictor(getPredictorName(pod))
 	pred.Add(metrics, podExec.actualExecTime)
 	l.podExecutions.Delete(toCacheKey(pod))
