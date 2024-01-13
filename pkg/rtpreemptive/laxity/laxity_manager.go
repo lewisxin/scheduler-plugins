@@ -156,7 +156,7 @@ func (l *laxityManager) RemovePodExecution(pod *v1.Pod) {
 	podExec := l.createPodExecutionIfNotExist(pod)
 	podExec.pause()
 	metrics := getPodMetrics(pod)
-	klog.V(5).InfoS("pod execution finished, updating predictor...", "metrics", metrics, "actualExecTime", podExec.actualExecTime, "pod", klog.KObj(pod))
+	klog.InfoS("pod execution finished, updating predictor...", "metrics", metrics, "actualExecTime", podExec.actualExecTime, "pod", klog.KObj(pod))
 	l.atlas.Add(metrics, podExec.actualExecTime)
 	l.podExecutions.Delete(toCacheKey(pod))
 }
