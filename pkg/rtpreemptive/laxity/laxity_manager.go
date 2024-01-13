@@ -144,7 +144,7 @@ func (l *laxityManager) createPodExecutionIfNotExist(pod *v1.Pod) *podExecution 
 			// 	l.atlas.Add(metrics, execTime)
 			// 	estExecTime = l.atlas.EstimateExecTime(metrics)
 			// }
-			klog.InfoS("laxityManager: EstimateExecTime", "estExecTime", estExecTime, "execTime", execTime, "metrics", metrics, "pod", klog.KObj(pod))
+			klog.InfoS("laxityManager: EstimateExecTime", "predictor", getPredictorName(pod), "estExecTime", estExecTime, "execTime", execTime, "metrics", metrics, "pod", klog.KObj(pod))
 		}
 		podExec = &podExecution{
 			deadline:    ddl,
