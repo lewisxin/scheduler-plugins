@@ -90,7 +90,9 @@ func (sched *Scheduler) scheduleOne(ctx context.Context) {
 		return
 	}
 
-	logger.V(3).Info("Attempting to schedule pod", "pod", klog.KObj(pod))
+	// TODO: revert back to 3
+	logger.Info("Attempting to schedule pod", "pod", klog.KObj(pod))
+	// ENDTODO
 
 	// Synchronously attempt to find a fit for the pod.
 	start := time.Now()
@@ -998,7 +1000,9 @@ func (sched *Scheduler) handleSchedulingFailure(ctx context.Context, fwk framewo
 	} else {
 		// In the case of extender, the pod may have been bound successfully, but timed out returning its response to the scheduler.
 		// It could result in the live version to carry .spec.nodeName, and that's inconsistent with the internal-queued version.
-		if len(cachedPod.Spec.NodeName) != 0 {
+		// FIXME: pod phase paused may not be reflected immediately, how to handle case when
+		// pod is mark to be resumed, but still currently paused? How to idenfity it?
+		if len(cachedPod.Spec.NodeName) != 0 && cachedPod.Status.Phase != v1.PodPaused {
 			logger.Info("Pod has been assigned to node. Abort adding it back to queue.", "pod", klog.KObj(pod), "node", cachedPod.Spec.NodeName)
 			// We need to call DonePod here because we don't call AddUnschedulableIfNotPresent in this case.
 		} else {

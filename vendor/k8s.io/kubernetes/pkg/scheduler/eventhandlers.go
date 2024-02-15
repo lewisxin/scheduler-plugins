@@ -215,7 +215,23 @@ func (sched *Scheduler) updatePodInCache(oldObj, newObj interface{}) {
 		logger.Error(nil, "Cannot convert newObj to *v1.Pod", "newObj", newObj)
 		return
 	}
-	logger.V(4).Info("Update event for scheduled pod", "pod", klog.KObj(oldPod))
+	logger.Info("Update event for scheduled pod", "oldPod", klog.KObj(oldPod), "oldPhase", oldPod.Status.Phase, "newPod", klog.KObj(newPod), "newPhase", newPod.Status.Phase)
+
+	if oldPod.Status.Phase != newPod.Status.Phase && newPod.Status.Phase == v1.PodPaused {
+		// if pod is paused, try to schedule pending pods
+		logger.Info("Pod is paused, moving pods in unschedulable / backoff queue to active queue", "pod", klog.KObj(newPod))
+		sched.SchedulingQueue.MoveAllToActiveOrBackoffQueue(logger, queue.AssignedPodUpdate, oldObj, newObj, nil)
+		// then add the paused pod to internal scheduling queue
+		logger.Info("Pod is paused, adding paused pod to internal scheduling queue", "pod", klog.KObj(newPod))
+		// add pod to cache and queue as a new pod
+		pod := newPod.DeepCopy()
+		podInfo, _ := framework.NewPodInfo(pod)
+		sched.Cache.RemovePod(logger, pod)
+		sched.Cache.AddPod(logger, pod)
+		queuePodInfo := &framework.QueuedPodInfo{PodInfo: podInfo, Timestamp: time.Now(), InitialAttemptTimestamp: nil}
+		sched.SchedulingQueue.AddUnschedulableIfNotPresent(logger, queuePodInfo, sched.SchedulingQueue.SchedulingCycle()+1)
+		return
+	}
 
 	if err := sched.Cache.UpdatePod(logger, oldPod, newPod); err != nil {
 		logger.Error(err, "Scheduler cache UpdatePod failed", "pod", klog.KObj(oldPod))
